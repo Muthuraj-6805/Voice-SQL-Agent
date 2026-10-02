@@ -408,17 +408,140 @@
 
 
     // ============================================================
-    // VOICE INPUT
+    // VOICE INPUT - BROWSER SPEECH RECOGNITION
     // ============================================================
 
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
+    let speechRecognition = null;
     let voiceInputSupported = false;
+
+    // True while the user wants speech recognition to remain active.
+    let voiceInputRequested = false;
+
+    // True only while the SpeechRecognition instance is actually active.
+    let isRecording = false;
+
+    // Text accumulated during the current voice session.
+    let finalTranscript = "";
+    let interimTranscript = "";
+
+    // Prevent rapid/repeated start() calls.
+    let recognitionRestartTimer = null;
+
+    // Prevent infinite restart loops when the browser reports a
+    // persistent error.
+    let consecutiveRecognitionErrors = 0;
+    const MAX_RESTART_ERRORS = 3;
 
 
     // ------------------------------------------------------------
-    // INITIALIZE MICROPHONE RECORDING
+    // VOICE UI HELPERS
+    // ------------------------------------------------------------
+
+    function setVoiceButtonListening(listening) {
+
+        const voiceButton =
+            document.getElementById("voiceButton");
+
+        if (!voiceButton) {
+            return;
+        }
+
+        if (listening) {
+
+            voiceButton.classList.add("listening");
+
+            voiceButton.innerHTML =
+                '⏹️ <span id="voiceButtonText">Stop</span>';
+
+            voiceButton.setAttribute(
+                "aria-label",
+                "Stop voice input"
+            );
+
+            voiceButton.setAttribute(
+                "title",
+                "Stop voice input"
+            );
+
+        } else {
+
+            voiceButton.classList.remove("listening");
+
+            voiceButton.innerHTML =
+                '🎤 <span id="voiceButtonText">Speak</span>';
+
+            voiceButton.setAttribute(
+                "aria-label",
+                "Start voice input"
+            );
+
+            voiceButton.setAttribute(
+                "title",
+                "Start voice input"
+            );
+        }
+    }
+
+
+    function getVoiceStatusElement() {
+
+        return document.getElementById("voiceStatus");
+    }
+
+
+    function setVoiceStatus(message) {
+
+        const status =
+            getVoiceStatusElement();
+
+        if (status) {
+            status.textContent = message;
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // FINALIZE CURRENT TRANSCRIPT
+    // ------------------------------------------------------------
+
+    function finalizeVoiceTranscript() {
+
+        const requirement =
+            document.getElementById("requirement");
+
+        if (!requirement) {
+            return;
+        }
+
+        const baseText =
+            requirement.dataset.voiceBase || "";
+
+        const spokenText =
+            finalTranscript
+                .replace(/\s+/g, " ")
+                .trim();
+
+        const combinedText =
+            (
+                baseText +
+                " " +
+                spokenText
+            )
+            .replace(/\s+/g, " ")
+            .trim();
+
+        requirement.value =
+            combinedText;
+
+        delete requirement.dataset.voiceBase;
+
+        finalTranscript = "";
+        interimTranscript = "";
+    }
+
+
+    // ------------------------------------------------------------
+    // INITIALIZE BROWSER SPEECH RECOGNITION
     // ------------------------------------------------------------
 
     function initializeVoiceInput() {
@@ -426,454 +549,689 @@
         const voiceButton =
             document.getElementById("voiceButton");
 
-        const voiceStatus =
-            document.getElementById("voiceStatus");
+        const SpeechRecognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
 
+        if (!voiceButton) {
+            return;
+        }
 
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia ||
-            !window.MediaRecorder) {
+        if (!SpeechRecognition) {
+
+            voiceInputSupported = false;
 
             voiceButton.disabled = true;
 
-            voiceStatus.textContent =
-                "Voice recording is not supported by this browser.";
+            setVoiceStatus(
+                "Browser speech recognition is not supported. Use Google Chrome or Microsoft Edge."
+            );
 
             return;
         }
-
 
         voiceInputSupported = true;
 
-        voiceStatus.textContent =
-            "Click Speak and record your requirement.";
+        speechRecognition =
+            new SpeechRecognition();
+
+        /*
+         * We intentionally use continuous=true, but Chrome can still
+         * end recognition automatically. The onend handler below
+         * restarts it only when there is no actual error.
+         */
+        speechRecognition.continuous = true;
+        speechRecognition.interimResults = true;
+
+        // English India is appropriate for the current project.
+        speechRecognition.lang = "en-US";
+
+        speechRecognition.maxAlternatives = 1;
 
 
-        if (navigator.permissions &&
-            navigator.permissions.query) {
+        // --------------------------------------------------------
+        // ON START
+        // --------------------------------------------------------
 
-            navigator.permissions
-                .query({ name: "microphone" })
-                .then(function(permission) {
+        speechRecognition.onstart =
+            function() {
 
-                    if (permission.state === "denied") {
+                isRecording = true;
 
-                        voiceStatus.textContent =
-                            "Microphone access is blocked. Allow microphone access in Chrome settings.";
+                consecutiveRecognitionErrors = 0;
 
+                setVoiceButtonListening(true);
+
+                setVoiceStatus(
+                    "Listening... speak your requirement."
+                );
+            };
+
+
+        // --------------------------------------------------------
+        // ON RESULT
+        // --------------------------------------------------------
+
+        speechRecognition.onresult =
+            function(event) {
+
+                let sessionFinal = "";
+                let sessionInterim = "";
+
+                for (
+                    let i = event.resultIndex;
+                    i < event.results.length;
+                    i++
+                ) {
+
+                    const result =
+                        event.results[i];
+
+                    if (!result || !result[0]) {
+                        continue;
                     }
 
-                })
-                .catch(function() {
-                    // Permission API is optional.
-                });
-        }
-    }
+                    const transcript =
+                        result[0].transcript
+                            .trim();
+
+                    if (!transcript) {
+                        continue;
+                    }
+
+                    if (result.isFinal) {
+
+                        sessionFinal +=
+                            transcript + " ";
+
+                    } else {
+
+                        sessionInterim +=
+                            transcript + " ";
+                    }
+                }
 
 
-    // ------------------------------------------------------------
-    // START / STOP RECORDING
-    // ------------------------------------------------------------
+                /*
+                 * Only replace the current event's temporary
+                 * values. The browser provides the accumulated
+                 * results through event.resultIndex.
+                 */
+                if (sessionFinal) {
 
-    async function toggleVoiceInput() {
+                    finalTranscript +=
+                        sessionFinal;
+                }
 
-        if (!voiceInputSupported) {
-            return;
-        }
-
-
-        if (isRecording) {
-
-            stopVoiceRecording();
-
-            return;
-        }
+                interimTranscript =
+                    sessionInterim;
 
 
-        await startVoiceRecording();
-    }
+                const requirement =
+                    document.getElementById(
+                        "requirement"
+                    );
 
+                if (!requirement) {
+                    return;
+                }
 
-    // ------------------------------------------------------------
-    // START RECORDING
-    // ------------------------------------------------------------
+                const baseText =
+                    requirement.dataset.voiceBase || "";
 
-    async function startVoiceRecording() {
-
-        const requirement =
-            document.getElementById("requirement");
-
-        const voiceButton =
-            document.getElementById("voiceButton");
-
-        const voiceStatus =
-            document.getElementById("voiceStatus");
-
-
-        if (requirement.disabled) {
-            return;
-        }
-
-
-        try {
-
-            const stream =
-                await navigator.mediaDevices.getUserMedia({
-                    audio: true
-                });
-
-
-            audioChunks = [];
-
-
-            let mimeType = "";
-
-            if (
-                MediaRecorder.isTypeSupported(
-                    "audio/webm;codecs=opus"
-                )
-            ) {
-
-                mimeType =
-                    "audio/webm;codecs=opus";
-
-            }
-
-            else if (
-                MediaRecorder.isTypeSupported(
-                    "audio/webm"
-                )
-            ) {
-
-                mimeType =
-                    "audio/webm";
-
-            }
-
-            else if (
-                MediaRecorder.isTypeSupported(
-                    "audio/ogg;codecs=opus"
-                )
-            ) {
-
-                mimeType =
-                    "audio/ogg;codecs=opus";
-
-            }
-
-
-            mediaRecorder =
-                mimeType
-                    ? new MediaRecorder(
-                        stream,
-                        { mimeType: mimeType }
+                const liveText =
+                    (
+                        baseText +
+                        " " +
+                        finalTranscript +
+                        interimTranscript
                     )
-                    : new MediaRecorder(stream);
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                requirement.value =
+                    liveText;
 
 
-            mediaRecorder.ondataavailable =
-                function(event) {
+                if (interimTranscript) {
 
-                    if (event.data &&
-                        event.data.size > 0) {
+                    setVoiceStatus(
+                        "Listening: " +
+                        interimTranscript.trim()
+                    );
 
-                        audioChunks.push(
-                            event.data
+                } else {
+
+                    setVoiceStatus(
+                        "Listening..."
+                    );
+                }
+            };
+
+
+        // --------------------------------------------------------
+        // ON ERROR
+        // --------------------------------------------------------
+
+        speechRecognition.onerror =
+            function(event) {
+
+                const errorType =
+                    event && event.error
+                        ? event.error
+                        : "unknown";
+
+                console.error(
+                    "Browser speech recognition error:",
+                    errorType,
+                    event && event.message
+                        ? event.message
+                        : "",
+                    event
+                );
+
+
+                /*
+                 * no-speech is normal. Chrome may fire it when the
+                 * user remains silent for a while. Do not treat it
+                 * as a fatal error.
+                 */
+                if (errorType === "no-speech") {
+
+                    if (voiceInputRequested) {
+
+                        setVoiceStatus(
+                            "Listening... speak your requirement."
                         );
                     }
-                };
+
+                    return;
+                }
 
 
-            mediaRecorder.onstart =
-                function() {
+                /*
+                 * aborted can occur when the recognition service is
+                 * stopped/restarted by the browser. Do not restart
+                 * from onerror itself. onend will handle the next
+                 * step.
+                 */
+                if (errorType === "aborted") {
 
-                    isRecording = true;
-
-                    voiceButton.classList.add(
-                        "listening"
-                    );
-
-                    voiceButton.innerHTML =
-                        '⏹️ <span id="voiceButtonText">Stop</span>';
-
-                    voiceButton.setAttribute(
-                        "aria-label",
-                        "Stop voice recording"
-                    );
-
-                    voiceButton.setAttribute(
-                        "title",
-                        "Stop voice recording"
-                    );
-
-                    voiceStatus.textContent =
-                        "Recording... speak your requirement.";
-
-                };
+                    return;
+                }
 
 
-            mediaRecorder.onstop =
-                async function() {
+                /*
+                 * These errors should NEVER be automatically
+                 * restarted because repeated restarts can produce
+                 * an endless error loop.
+                 */
+                if (
+                    errorType === "not-allowed" ||
+                    errorType === "service-not-allowed"
+                ) {
 
+                    voiceInputRequested = false;
                     isRecording = false;
 
-                    voiceButton.classList.remove(
-                        "listening"
+                    clearTimeout(
+                        recognitionRestartTimer
                     );
 
-                    voiceButton.innerHTML =
-                        '🎤 <span id="voiceButtonText">Speak</span>';
+                    setVoiceButtonListening(false);
 
-                    voiceButton.setAttribute(
-                        "aria-label",
-                        "Start voice input"
+                    setVoiceStatus(
+                        "Microphone permission was denied. Allow microphone access for this site and try again."
                     );
 
-                    voiceButton.setAttribute(
-                        "title",
-                        "Start voice input"
-                    );
+                    return;
+                }
 
 
-                    stream
-                        .getTracks()
-                        .forEach(
-                            function(track) {
-                                track.stop();
-                            }
-                        );
+                if (errorType === "audio-capture") {
 
-
-                    await transcribeRecordedAudio();
-                };
-
-
-            mediaRecorder.onerror =
-                function(event) {
-
-                    console.error(
-                        "MediaRecorder error:",
-                        event
-                    );
-
+                    voiceInputRequested = false;
                     isRecording = false;
 
-                    stream
-                        .getTracks()
-                        .forEach(
-                            function(track) {
-                                track.stop();
-                            }
-                        );
-
-                    voiceButton.classList.remove(
-                        "listening"
+                    clearTimeout(
+                        recognitionRestartTimer
                     );
 
-                    voiceButton.innerHTML =
-                        '🎤 <span id="voiceButtonText">Speak</span>';
+                    setVoiceButtonListening(false);
 
-                    voiceStatus.textContent =
-                        "Could not record audio.";
+                    setVoiceStatus(
+                        "No microphone was available. Check your microphone and browser permissions."
+                    );
 
-                };
-
-
-            mediaRecorder.start();
-
-        }
-
-        catch (error) {
-
-            console.error(
-                "Could not access microphone:",
-                error
-            );
-
-            if (
-                error.name === "NotAllowedError" ||
-                error.name === "PermissionDeniedError"
-            ) {
-
-                voiceStatus.textContent =
-                    "Microphone permission was denied. Allow microphone access and try again.";
-
-            }
-
-            else if (
-                error.name === "NotFoundError"
-            ) {
-
-                voiceStatus.textContent =
-                    "No microphone was found.";
-
-            }
-
-            else {
-
-                voiceStatus.textContent =
-                    "Could not access the microphone: " +
-                    error.message;
-
-            }
-        }
-    }
+                    return;
+                }
 
 
-    // ------------------------------------------------------------
-    // STOP RECORDING
-    // ------------------------------------------------------------
+                /*
+                 * Browser speech recognition commonly reports
+                 * "network" when its speech service cannot be reached.
+                 * Do NOT endlessly restart it.
+                 */
+                if (errorType === "network") {
 
-    function stopVoiceRecording() {
+                    voiceInputRequested = false;
+                    isRecording = false;
 
+                    clearTimeout(
+                        recognitionRestartTimer
+                    );
+
+                    setVoiceButtonListening(false);
+
+                    setVoiceStatus(
+                        "Speech recognition could not connect to the browser speech service. Check your internet connection and try again."
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * Unknown errors are treated as fatal for this
+                 * recognition session rather than repeatedly calling
+                 * start().
+                 */
+                consecutiveRecognitionErrors++;
+
+                voiceInputRequested = false;
+                isRecording = false;
+
+                clearTimeout(
+                    recognitionRestartTimer
+                );
+
+                setVoiceButtonListening(false);
+
+                setVoiceStatus(
+                    "Speech recognition error: " +
+                    errorType +
+                    ". Please try again."
+                );
+            };
+
+
+        // --------------------------------------------------------
+        // ON END
+        // --------------------------------------------------------
+
+        speechRecognition.onend =
+            function() {
+
+                isRecording = false;
+
+
+                /*
+                 * If the user explicitly clicked Stop, do NOT restart.
+                 */
+                if (!voiceInputRequested) {
+
+                    setVoiceButtonListening(false);
+
+                    finalizeVoiceTranscript();
+
+                    const requirement =
+                        document.getElementById(
+                            "requirement"
+                        );
+
+                    if (
+                        requirement &&
+                        requirement.value.trim()
+                    ) {
+
+                        setVoiceStatus(
+                            "Speech added to the requirement."
+                        );
+
+                    } else {
+
+                        setVoiceStatus(
+                            "No speech was detected. Try again."
+                        );
+                    }
+
+                    return;
+                }
+
+
+                /*
+                 * A fatal error has already set voiceInputRequested
+                 * to false. This check protects against accidental
+                 * restart loops.
+                 */
+                if (
+                    consecutiveRecognitionErrors >=
+                    MAX_RESTART_ERRORS
+                ) {
+
+                    voiceInputRequested = false;
+
+                    setVoiceButtonListening(false);
+
+                    setVoiceStatus(
+                        "Speech recognition stopped after repeated errors. Please click Speak to try again."
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * Chrome can end a continuous recognition session
+                 * naturally. Restart after a short delay.
+                 */
+                setVoiceStatus(
+                    "Reconnecting speech recognition..."
+                );
+
+                clearTimeout(
+                    recognitionRestartTimer
+                );
+
+                recognitionRestartTimer =
+                    setTimeout(
+                        function() {
+
+                            if (
+                                !voiceInputRequested ||
+                                !speechRecognition
+                            ) {
+                                return;
+                            }
+
+                            try {
+
+                                speechRecognition.start();
+
+                            } catch (error) {
+
+                                /*
+                                 * InvalidStateError means the
+                                 * recognition object is already active
+                                 * or transitioning. Wait for onend or
+                                 * let the user retry.
+                                 */
+                                console.debug(
+                                    "Speech recognition restart:",
+                                    error
+                                );
+
+                                if (
+                                    error.name !==
+                                    "InvalidStateError"
+                                ) {
+
+                                    voiceInputRequested = false;
+
+                                    setVoiceButtonListening(
+                                        false
+                                    );
+
+                                    setVoiceStatus(
+                                        "Could not restart speech recognition. Click Speak to try again."
+                                    );
+                                }
+                            }
+
+                        },
+                        250
+                    );
+            };
+
+
+        setVoiceStatus(
+            "Click Speak and say your database requirement."
+        );
+
+
+        /*
+         * Optional microphone permission check.
+         * This does not request permission; the browser does that
+         * when speechRecognition.start() is called.
+         */
         if (
-            mediaRecorder &&
-            mediaRecorder.state !== "inactive"
+            navigator.permissions &&
+            navigator.permissions.query
         ) {
 
-            mediaRecorder.stop();
+            navigator.permissions
+                .query({
+                    name: "microphone"
+                })
+                .then(
+                    function(permission) {
 
+                        if (
+                            permission.state ===
+                            "denied"
+                        ) {
+
+                            setVoiceStatus(
+                                "Microphone access is blocked. Allow microphone access in browser settings."
+                            );
+                        }
+                    }
+                )
+                .catch(
+                    function() {
+                        // Permission API is optional.
+                    }
+                );
         }
     }
 
 
     // ------------------------------------------------------------
-    // SEND AUDIO TO FASTER-WHISPER
+    // START / STOP
     // ------------------------------------------------------------
 
-    async function transcribeRecordedAudio() {
+    function toggleVoiceInput() {
 
-        const voiceButton =
-            document.getElementById("voiceButton");
+        if (
+            !voiceInputSupported ||
+            !speechRecognition
+        ) {
+            return;
+        }
 
-        const voiceStatus =
-            document.getElementById("voiceStatus");
+        if (voiceInputRequested) {
+
+            stopVoiceInput();
+
+            return;
+        }
+
+        startVoiceInput();
+    }
+
+
+    // ------------------------------------------------------------
+    // START VOICE INPUT
+    // ------------------------------------------------------------
+
+    function startVoiceInput() {
 
         const requirement =
-            document.getElementById("requirement");
+            document.getElementById(
+                "requirement"
+            );
+
+        if (!requirement) {
+            return;
+        }
+
+        if (requirement.disabled) {
+
+            setVoiceStatus(
+                "Process a CSV file before using voice input."
+            );
+
+            return;
+        }
+
+        if (!speechRecognition) {
+            return;
+        }
 
 
-        if (audioChunks.length === 0) {
+        /*
+         * Do not call start() twice.
+         */
+        if (voiceInputRequested || isRecording) {
+            return;
+        }
 
-            voiceStatus.textContent =
-                "No audio was recorded. Try again.";
+
+        voiceInputRequested = true;
+
+        consecutiveRecognitionErrors = 0;
+
+        finalTranscript = "";
+        interimTranscript = "";
+
+        clearTimeout(
+            recognitionRestartTimer
+        );
+
+
+        /*
+         * Preserve text that was manually typed before clicking
+         * Speak.
+         */
+        requirement.dataset.voiceBase =
+            requirement.value.trim();
+
+
+        try {
+
+            speechRecognition.start();
+
+            setVoiceStatus(
+                "Starting microphone..."
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Could not start browser speech recognition:",
+                error
+            );
+
+            voiceInputRequested = false;
+
+            isRecording = false;
+
+            delete requirement.dataset.voiceBase;
+
+            setVoiceButtonListening(false);
+
+            if (
+                error.name ===
+                "InvalidStateError"
+            ) {
+
+                setVoiceStatus(
+                    "Speech recognition is already active."
+                );
+
+            } else {
+
+                setVoiceStatus(
+                    "Could not start speech recognition. Allow microphone access and try again."
+                );
+            }
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // STOP VOICE INPUT
+    // ------------------------------------------------------------
+
+    function stopVoiceInput() {
+
+        /*
+         * Set this FIRST.
+         *
+         * onend uses this flag to distinguish a user-requested stop
+         * from a browser-generated end event.
+         */
+        voiceInputRequested = false;
+
+        clearTimeout(
+            recognitionRestartTimer
+        );
+
+
+        if (
+            speechRecognition &&
+            isRecording
+        ) {
+
+            setVoiceStatus(
+                "Finishing speech..."
+            );
+
+            try {
+
+                speechRecognition.stop();
+
+            } catch (error) {
+
+                console.debug(
+                    "Speech recognition stop:",
+                    error
+                );
+
+                isRecording = false;
+
+                setVoiceButtonListening(false);
+
+                finalizeVoiceTranscript();
+
+                setVoiceStatus(
+                    "Speech added to the requirement."
+                );
+            }
 
             return;
         }
 
 
-        voiceButton.disabled = true;
+        /*
+         * If the browser had already ended recognition before the
+         * user clicked Stop, finalize whatever text we have.
+         */
+        isRecording = false;
 
-        voiceStatus.textContent =
-            "Transcribing with Faster-Whisper...";
+        setVoiceButtonListening(false);
 
+        finalizeVoiceTranscript();
 
-        try {
-
-            const audioBlob =
-                new Blob(
-                    audioChunks,
-                    {
-                        type:
-                            audioChunks[0].type ||
-                            "audio/webm"
-                    }
-                );
-
-
-            const formData =
-                new FormData();
-
-
-            const extension =
-                audioBlob.type.includes("ogg")
-                    ? "ogg"
-                    : "webm";
-
-
-            formData.append(
-                "audio",
-                audioBlob,
-                "voice." + extension
+        const requirement =
+            document.getElementById(
+                "requirement"
             );
 
+        if (
+            requirement &&
+            requirement.value.trim()
+        ) {
 
-            const response =
-                await fetch(
-                    "/transcribe",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (
-                !response.ok ||
-                !data.success
-            ) {
-
-                throw new Error(
-                    data.error ||
-                    "Speech transcription failed."
-                );
-            }
-
-
-            const transcript =
-                (data.text || "").trim();
-
-
-            if (!transcript) {
-
-                throw new Error(
-                    "No speech was detected."
-                );
-            }
-
-
-            const existingText =
-                requirement.value.trim();
-
-
-            requirement.value =
-                existingText
-                    ? existingText + " " + transcript
-                    : transcript;
-
-
-            requirement.focus();
-
-
-            voiceStatus.textContent =
-                "Speech added to the requirement.";
-
-        }
-
-        catch (error) {
-
-            console.error(
-                "Speech transcription error:",
-                error
+            setVoiceStatus(
+                "Speech added to the requirement."
             );
 
-            voiceStatus.textContent =
-                "Transcription failed: " +
-                error.message;
+        } else {
 
-        }
-
-        finally {
-
-            audioChunks = [];
-
-            voiceButton.disabled =
-                !voiceInputSupported ||
-                requirement.disabled;
+            setVoiceStatus(
+                "No speech was detected. Try again."
+            );
         }
     }
 
@@ -889,6 +1247,9 @@
                 "voiceButton"
             );
 
+        if (!voiceButton) {
+            return;
+        }
 
         if (!voiceInputSupported) {
 
@@ -897,20 +1258,22 @@
             return;
         }
 
-
         voiceButton.disabled =
             !enabled;
 
 
-        if (!enabled && isRecording) {
+        if (
+            !enabled &&
+            voiceInputRequested
+        ) {
 
-            stopVoiceRecording();
+            stopVoiceInput();
         }
     }
 
 
     // ------------------------------------------------------------
-    // INITIALIZE WHEN PAGE LOADS
+    // INITIALIZE ON PAGE LOAD
     // ------------------------------------------------------------
 
     document.addEventListener(
