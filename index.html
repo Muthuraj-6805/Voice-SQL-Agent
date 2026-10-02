@@ -1,0 +1,3177 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Voice SQL Agent</title>
+
+    <link
+        rel="stylesheet"
+        href="/style.css"
+    >
+
+
+
+
+
+    <style>
+        .result-summary-section {
+            scroll-margin-top: 20px;
+            margin-top: 18px;
+            padding: 14px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f9fafb;
+        }
+
+        .result-summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .result-summary-header h3 {
+            margin: 0;
+        }
+
+        .result-summary-speaker-button {
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            color: #374151;
+            border-radius: 8px;
+            padding: 6px 10px;
+            min-width: 42px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            transition: background 0.15s ease,
+                        border-color 0.15s ease;
+        }
+
+        .result-summary-speaker-button:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        .result-summary-speaker-button.speaking {
+            background: #f3f4f6;
+            border-color: #6b7280;
+        }
+
+        .result-summary-speaker-button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .result-summary-section h3 {
+            margin: 0;
+        }
+
+        .result-summary-content {
+            margin: 0;
+            line-height: 1.65;
+        }
+
+        .result-summary-content p {
+            margin: 0 0 10px 0;
+        }
+
+        .result-summary-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-summary-content ul,
+        .result-summary-content ol {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+
+        .result-summary-content li {
+            margin: 5px 0;
+        }
+
+        .result-summary-content strong {
+            font-weight: 700;
+        }
+
+        .result-summary-content code {
+            padding: 2px 5px;
+            border-radius: 4px;
+            background: #eef2f7;
+            font-family: monospace;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- =========================================================
+         HEADER
+         ========================================================= -->
+
+    <header class="header">
+
+        <h1>
+            Voice SQL Agent
+        </h1>
+
+        <p>
+            Upload a database file and convert
+            natural-language requirements into SQL
+            using the Groq API.
+        </p>
+
+    </header>
+
+
+    <!-- =========================================================
+         FILE UPLOAD CARD
+         ========================================================= -->
+
+    <section class="card">
+
+        <div class="section">
+
+            <label for="fileInput">
+                Upload Database File
+            </label>
+
+
+            <input
+                type="file"
+                id="fileInput"
+                accept=".csv"
+            >
+
+
+            <p class="file-help">
+                Currently supported: CSV files
+                containing one table.
+            </p>
+
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             PROCESS BUTTON
+             ----------------------------------------------------- -->
+
+        <button
+            id="processButton"
+            onclick="processFile()"
+        >
+            Process File
+        </button>
+
+
+        <!-- -----------------------------------------------------
+             PROCESSING STATUS
+             ----------------------------------------------------- -->
+
+        <div
+            id="processLoading"
+            class="loading hidden"
+        >
+            Processing file and extracting schema...
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             DATABASE STATUS
+             ----------------------------------------------------- -->
+
+        <div
+            id="databaseStatus"
+            class="database-status hidden"
+        ></div>
+
+
+        <!-- -----------------------------------------------------
+             FILE ERROR
+             ----------------------------------------------------- -->
+
+        <div
+            id="fileError"
+            class="error hidden"
+        ></div>
+
+    </section>
+
+
+    <!-- =========================================================
+         REQUIREMENT CARD
+         ========================================================= -->
+
+    <main class="card">
+
+
+        <!-- -----------------------------------------------------
+             REQUIREMENT INPUT
+             ----------------------------------------------------- -->
+
+        <div class="section">
+
+            <label for="requirement">
+                Database Requirement
+            </label>
+
+            <div class="voice-input-wrapper">
+
+                <textarea
+                    id="requirement"
+                    placeholder="Process a CSV file first..."
+                    rows="5"
+                    disabled
+                ></textarea>
+
+                <div class="voice-controls">
+
+                    <button
+                        type="button"
+                        id="voiceButton"
+                        class="voice-button"
+                        onclick="toggleVoiceInput()"
+                        disabled
+                        aria-label="Start voice input"
+                        title="Start voice input"
+                    >
+                        🎤 <span id="voiceButtonText">Speak</span>
+                    </button>
+
+                    <span
+                        id="voiceStatus"
+                        class="voice-status"
+                        aria-live="polite"
+                    ></span>
+
+                </div>
+
+            </div>
+
+            <p class="file-help">
+                Click the microphone and speak your database requirement.
+                Your speech will be converted to text in the requirement box.
+            </p>
+
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             GENERATE BUTTON
+             ----------------------------------------------------- -->
+
+        <button
+            id="generateButton"
+            onclick="generateSQL()"
+            disabled
+        >
+            Generate SQL
+        </button>
+
+
+        <!-- -----------------------------------------------------
+             LOADING
+             ----------------------------------------------------- -->
+
+        <div
+            id="loading"
+            class="loading hidden"
+        >
+            Generating SQL, fetching data, and summarizing the result...
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             ERROR
+             ----------------------------------------------------- -->
+
+        <div
+            id="error"
+            class="error hidden"
+        ></div>
+
+    </main>
+
+
+    <!-- =========================================================
+         QUERY HISTORY
+         ========================================================= -->
+
+    <section
+        id="queryHistory"
+        class="query-history"
+    >
+    </section>
+
+
+    <!-- =========================================================
+         DATABASE SCHEMA
+         ========================================================= -->
+
+    <section
+        id="schemaCard"
+        class="schema-card hidden"
+    >
+
+        <h2>
+            Available Database Schema
+        </h2>
+
+
+        <!-- -----------------------------------------------------
+             TABLE NAME
+             ----------------------------------------------------- -->
+
+        <div
+            id="tableName"
+            class="table-name"
+        >
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             ROW COUNT
+             ----------------------------------------------------- -->
+
+        <div
+            id="processedRowCount"
+            class="schema-row-count"
+        >
+        </div>
+
+
+        <!-- -----------------------------------------------------
+             DATABASE COLUMNS
+             ----------------------------------------------------- -->
+
+        <div
+            id="schemaColumns"
+            class="columns"
+        >
+        </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         FOOTER
+         ========================================================= -->
+
+    <footer>
+
+        <p>
+            Powered by Groq API
+        </p>
+
+    </footer>
+
+
+</div>
+
+
+<!-- =============================================================
+     JAVASCRIPT
+     ============================================================= -->
+
+<script>
+
+
+    // ============================================================
+    // QUERY COUNTER
+    // ============================================================
+
+    let queryNumber = 0;
+
+
+    // ============================================================
+    // RESULT SUMMARY SPEECH
+    // ============================================================
+
+    let currentSpeechButton = null;
+    let currentSpeechText = "";
+
+
+    // ============================================================
+    // VOICE INPUT
+    // ============================================================
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let voiceInputSupported = false;
+
+
+    // ------------------------------------------------------------
+    // INITIALIZE MICROPHONE RECORDING
+    // ------------------------------------------------------------
+
+    function initializeVoiceInput() {
+
+        const voiceButton =
+            document.getElementById("voiceButton");
+
+        const voiceStatus =
+            document.getElementById("voiceStatus");
+
+
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia ||
+            !window.MediaRecorder) {
+
+            voiceButton.disabled = true;
+
+            voiceStatus.textContent =
+                "Voice recording is not supported by this browser.";
+
+            return;
+        }
+
+
+        voiceInputSupported = true;
+
+        voiceStatus.textContent =
+            "Click Speak and record your requirement.";
+
+
+        if (navigator.permissions &&
+            navigator.permissions.query) {
+
+            navigator.permissions
+                .query({ name: "microphone" })
+                .then(function(permission) {
+
+                    if (permission.state === "denied") {
+
+                        voiceStatus.textContent =
+                            "Microphone access is blocked. Allow microphone access in Chrome settings.";
+
+                    }
+
+                })
+                .catch(function() {
+                    // Permission API is optional.
+                });
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // START / STOP RECORDING
+    // ------------------------------------------------------------
+
+    async function toggleVoiceInput() {
+
+        if (!voiceInputSupported) {
+            return;
+        }
+
+
+        if (isRecording) {
+
+            stopVoiceRecording();
+
+            return;
+        }
+
+
+        await startVoiceRecording();
+    }
+
+
+    // ------------------------------------------------------------
+    // START RECORDING
+    // ------------------------------------------------------------
+
+    async function startVoiceRecording() {
+
+        const requirement =
+            document.getElementById("requirement");
+
+        const voiceButton =
+            document.getElementById("voiceButton");
+
+        const voiceStatus =
+            document.getElementById("voiceStatus");
+
+
+        if (requirement.disabled) {
+            return;
+        }
+
+
+        try {
+
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+
+
+            audioChunks = [];
+
+
+            let mimeType = "";
+
+            if (
+                MediaRecorder.isTypeSupported(
+                    "audio/webm;codecs=opus"
+                )
+            ) {
+
+                mimeType =
+                    "audio/webm;codecs=opus";
+
+            }
+
+            else if (
+                MediaRecorder.isTypeSupported(
+                    "audio/webm"
+                )
+            ) {
+
+                mimeType =
+                    "audio/webm";
+
+            }
+
+            else if (
+                MediaRecorder.isTypeSupported(
+                    "audio/ogg;codecs=opus"
+                )
+            ) {
+
+                mimeType =
+                    "audio/ogg;codecs=opus";
+
+            }
+
+
+            mediaRecorder =
+                mimeType
+                    ? new MediaRecorder(
+                        stream,
+                        { mimeType: mimeType }
+                    )
+                    : new MediaRecorder(stream);
+
+
+            mediaRecorder.ondataavailable =
+                function(event) {
+
+                    if (event.data &&
+                        event.data.size > 0) {
+
+                        audioChunks.push(
+                            event.data
+                        );
+                    }
+                };
+
+
+            mediaRecorder.onstart =
+                function() {
+
+                    isRecording = true;
+
+                    voiceButton.classList.add(
+                        "listening"
+                    );
+
+                    voiceButton.innerHTML =
+                        '⏹️ <span id="voiceButtonText">Stop</span>';
+
+                    voiceButton.setAttribute(
+                        "aria-label",
+                        "Stop voice recording"
+                    );
+
+                    voiceButton.setAttribute(
+                        "title",
+                        "Stop voice recording"
+                    );
+
+                    voiceStatus.textContent =
+                        "Recording... speak your requirement.";
+
+                };
+
+
+            mediaRecorder.onstop =
+                async function() {
+
+                    isRecording = false;
+
+                    voiceButton.classList.remove(
+                        "listening"
+                    );
+
+                    voiceButton.innerHTML =
+                        '🎤 <span id="voiceButtonText">Speak</span>';
+
+                    voiceButton.setAttribute(
+                        "aria-label",
+                        "Start voice input"
+                    );
+
+                    voiceButton.setAttribute(
+                        "title",
+                        "Start voice input"
+                    );
+
+
+                    stream
+                        .getTracks()
+                        .forEach(
+                            function(track) {
+                                track.stop();
+                            }
+                        );
+
+
+                    await transcribeRecordedAudio();
+                };
+
+
+            mediaRecorder.onerror =
+                function(event) {
+
+                    console.error(
+                        "MediaRecorder error:",
+                        event
+                    );
+
+                    isRecording = false;
+
+                    stream
+                        .getTracks()
+                        .forEach(
+                            function(track) {
+                                track.stop();
+                            }
+                        );
+
+                    voiceButton.classList.remove(
+                        "listening"
+                    );
+
+                    voiceButton.innerHTML =
+                        '🎤 <span id="voiceButtonText">Speak</span>';
+
+                    voiceStatus.textContent =
+                        "Could not record audio.";
+
+                };
+
+
+            mediaRecorder.start();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Could not access microphone:",
+                error
+            );
+
+            if (
+                error.name === "NotAllowedError" ||
+                error.name === "PermissionDeniedError"
+            ) {
+
+                voiceStatus.textContent =
+                    "Microphone permission was denied. Allow microphone access and try again.";
+
+            }
+
+            else if (
+                error.name === "NotFoundError"
+            ) {
+
+                voiceStatus.textContent =
+                    "No microphone was found.";
+
+            }
+
+            else {
+
+                voiceStatus.textContent =
+                    "Could not access the microphone: " +
+                    error.message;
+
+            }
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // STOP RECORDING
+    // ------------------------------------------------------------
+
+    function stopVoiceRecording() {
+
+        if (
+            mediaRecorder &&
+            mediaRecorder.state !== "inactive"
+        ) {
+
+            mediaRecorder.stop();
+
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // SEND AUDIO TO FASTER-WHISPER
+    // ------------------------------------------------------------
+
+    async function transcribeRecordedAudio() {
+
+        const voiceButton =
+            document.getElementById("voiceButton");
+
+        const voiceStatus =
+            document.getElementById("voiceStatus");
+
+        const requirement =
+            document.getElementById("requirement");
+
+
+        if (audioChunks.length === 0) {
+
+            voiceStatus.textContent =
+                "No audio was recorded. Try again.";
+
+            return;
+        }
+
+
+        voiceButton.disabled = true;
+
+        voiceStatus.textContent =
+            "Transcribing with Faster-Whisper...";
+
+
+        try {
+
+            const audioBlob =
+                new Blob(
+                    audioChunks,
+                    {
+                        type:
+                            audioChunks[0].type ||
+                            "audio/webm"
+                    }
+                );
+
+
+            const formData =
+                new FormData();
+
+
+            const extension =
+                audioBlob.type.includes("ogg")
+                    ? "ogg"
+                    : "webm";
+
+
+            formData.append(
+                "audio",
+                audioBlob,
+                "voice." + extension
+            );
+
+
+            const response =
+                await fetch(
+                    "/transcribe",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                throw new Error(
+                    data.error ||
+                    "Speech transcription failed."
+                );
+            }
+
+
+            const transcript =
+                (data.text || "").trim();
+
+
+            if (!transcript) {
+
+                throw new Error(
+                    "No speech was detected."
+                );
+            }
+
+
+            const existingText =
+                requirement.value.trim();
+
+
+            requirement.value =
+                existingText
+                    ? existingText + " " + transcript
+                    : transcript;
+
+
+            requirement.focus();
+
+
+            voiceStatus.textContent =
+                "Speech added to the requirement.";
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Speech transcription error:",
+                error
+            );
+
+            voiceStatus.textContent =
+                "Transcription failed: " +
+                error.message;
+
+        }
+
+        finally {
+
+            audioChunks = [];
+
+            voiceButton.disabled =
+                !voiceInputSupported ||
+                requirement.disabled;
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // ENABLE / DISABLE VOICE INPUT
+    // ------------------------------------------------------------
+
+    function setVoiceInputEnabled(enabled) {
+
+        const voiceButton =
+            document.getElementById(
+                "voiceButton"
+            );
+
+
+        if (!voiceInputSupported) {
+
+            voiceButton.disabled = true;
+
+            return;
+        }
+
+
+        voiceButton.disabled =
+            !enabled;
+
+
+        if (!enabled && isRecording) {
+
+            stopVoiceRecording();
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // INITIALIZE WHEN PAGE LOADS
+    // ------------------------------------------------------------
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function() {
+
+            initializeVoiceInput();
+
+        }
+    );
+
+
+    // ============================================================
+    // RESULT SUMMARY SPEECH FUNCTIONS
+    // ============================================================
+
+    function stopResultSummarySpeech() {
+
+        if (
+            "speechSynthesis" in window &&
+            window.speechSynthesis.speaking
+        ) {
+            window.speechSynthesis.cancel();
+        }
+
+        if (currentSpeechButton) {
+
+            currentSpeechButton.classList.remove(
+                "speaking"
+            );
+
+            currentSpeechButton.textContent = "🔊";
+
+            currentSpeechButton.setAttribute(
+                "aria-label",
+                "Read result summary aloud"
+            );
+
+            currentSpeechButton.setAttribute(
+                "title",
+                "Read result summary aloud"
+            );
+        }
+
+        currentSpeechButton = null;
+        currentSpeechText = "";
+    }
+
+
+    function getSpeechTextFromSummary(summaryText) {
+
+        if (!summaryText) {
+            return "";
+        }
+
+        const temporaryContainer =
+            document.createElement("div");
+
+        temporaryContainer.innerHTML =
+            renderAssistantResponse(summaryText);
+
+        return (
+            temporaryContainer.textContent ||
+            temporaryContainer.innerText ||
+            ""
+        )
+            .replace(/\\s+/g, " ")
+            .trim();
+    }
+
+
+    function speakResultSummary(
+        summaryText,
+        speakerButton = null,
+        automatic = false
+    ) {
+
+        if (
+            !("speechSynthesis" in window) ||
+            typeof SpeechSynthesisUtterance === "undefined"
+        ) {
+
+            if (!automatic) {
+                alert(
+                    "Text-to-speech is not supported by this browser."
+                );
+            }
+
+            return;
+        }
+
+
+        const speechText =
+            getSpeechTextFromSummary(
+                summaryText
+            );
+
+        if (!speechText) {
+            return;
+        }
+
+
+        // Clicking the same speaker button while it is speaking
+        // stops the current speech.
+        if (
+            speakerButton &&
+            currentSpeechButton === speakerButton &&
+            window.speechSynthesis.speaking
+        ) {
+
+            stopResultSummarySpeech();
+            return;
+        }
+
+
+        // Stop anything currently being spoken before starting
+        // the new summary.
+        stopResultSummarySpeech();
+
+
+        const utterance =
+            new SpeechSynthesisUtterance(
+                speechText
+            );
+
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+
+        if (speakerButton) {
+
+            currentSpeechButton =
+                speakerButton;
+
+            currentSpeechText =
+                speechText;
+
+            speakerButton.classList.add(
+                "speaking"
+            );
+
+            speakerButton.textContent =
+                "⏹";
+
+            speakerButton.setAttribute(
+                "aria-label",
+                "Stop reading result summary"
+            );
+
+            speakerButton.setAttribute(
+                "title",
+                "Stop reading result summary"
+            );
+        }
+
+
+        utterance.onend =
+            function() {
+
+                if (
+                    currentSpeechButton ===
+                    speakerButton
+                ) {
+                    stopResultSummarySpeech();
+                }
+
+            };
+
+
+        utterance.onerror =
+            function(event) {
+
+                console.warn(
+                    "Result summary speech error:",
+                    event
+                );
+
+                if (
+                    currentSpeechButton ===
+                    speakerButton
+                ) {
+                    stopResultSummarySpeech();
+                }
+
+            };
+
+
+        window.speechSynthesis.speak(
+            utterance
+        );
+    }
+
+
+    // ============================================================
+    // PROCESS FILE
+    // ============================================================
+
+    async function processFile() {
+
+        // Stop any result-summary speech when the database is reset.
+        stopResultSummarySpeech();
+
+        const fileInput =
+            document.getElementById(
+                "fileInput"
+            );
+
+
+        const processButton =
+            document.getElementById(
+                "processButton"
+            );
+
+
+        const processLoading =
+            document.getElementById(
+                "processLoading"
+            );
+
+
+        const databaseStatus =
+            document.getElementById(
+                "databaseStatus"
+            );
+
+
+        const fileError =
+            document.getElementById(
+                "fileError"
+            );
+
+
+        const requirement =
+            document.getElementById(
+                "requirement"
+            );
+
+
+        const generateButton =
+            document.getElementById(
+                "generateButton"
+            );
+
+
+        const schemaCard =
+            document.getElementById(
+                "schemaCard"
+            );
+
+
+        const queryHistory =
+            document.getElementById(
+                "queryHistory"
+            );
+
+
+        // --------------------------------------------------------
+        // Reset Previous Status
+        // --------------------------------------------------------
+
+        fileError.classList.add(
+            "hidden"
+        );
+
+
+        databaseStatus.classList.add(
+            "hidden"
+        );
+
+
+        schemaCard.classList.add(
+            "hidden"
+        );
+
+
+        // --------------------------------------------------------
+        // Clear Query History
+        // --------------------------------------------------------
+
+        queryHistory.innerHTML =
+            "";
+
+
+        queryNumber = 0;
+
+
+        // --------------------------------------------------------
+        // Validate File
+        // --------------------------------------------------------
+
+        if (
+            !fileInput.files ||
+            fileInput.files.length === 0
+        ) {
+
+            showFileError(
+                "Please select a CSV file first."
+            );
+
+            return;
+
+        }
+
+
+        const file =
+            fileInput.files[0];
+
+
+        // --------------------------------------------------------
+        // Validate Extension
+        // --------------------------------------------------------
+
+        const filename =
+            file.name.toLowerCase();
+
+
+        if (
+            !filename.endsWith(".csv")
+        ) {
+
+            showFileError(
+                "Only CSV files are currently supported."
+            );
+
+            return;
+
+        }
+
+
+        // --------------------------------------------------------
+        // Create Form Data
+        // --------------------------------------------------------
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "file",
+            file
+        );
+
+
+        // --------------------------------------------------------
+        // Show Loading
+        // --------------------------------------------------------
+
+        processButton.disabled =
+            true;
+
+
+        processLoading.classList.remove(
+            "hidden"
+        );
+
+
+        try {
+
+            // ----------------------------------------------------
+            // Send File to Flask
+            // ----------------------------------------------------
+
+            const response =
+                await fetch(
+                    "/process-file",
+                    {
+
+                        method: "POST",
+
+                        body: formData
+
+                    }
+                );
+
+
+            // ----------------------------------------------------
+            // Parse Response
+            // ----------------------------------------------------
+
+            const data =
+                await response.json();
+
+
+            // ----------------------------------------------------
+            // Handle Error
+            // ----------------------------------------------------
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                throw new Error(
+
+                    data.error ||
+                    "Failed to process file."
+
+                );
+
+            }
+
+
+            // ----------------------------------------------------
+            // Display Database Status
+            // ----------------------------------------------------
+
+            databaseStatus.textContent =
+
+                `✓ ${data.filename} processed successfully. ` +
+                `${data.row_count} rows loaded.`;
+
+
+            databaseStatus.classList.remove(
+                "hidden"
+            );
+
+
+            // ----------------------------------------------------
+            // Enable Requirement Input
+            // ----------------------------------------------------
+
+            requirement.disabled =
+                false;
+
+
+            requirement.placeholder =
+
+                "Example: Find employees whose salary is greater than 70000.";
+
+
+            // ----------------------------------------------------
+            // Enable Generate Button
+            // ----------------------------------------------------
+
+            generateButton.disabled =
+                false;
+
+            // Enable voice input after a CSV is successfully processed.
+            setVoiceInputEnabled(true);
+
+
+            // ----------------------------------------------------
+            // Display Dynamic Schema
+            // ----------------------------------------------------
+
+            displaySchema(
+                data
+            );
+
+
+            // ----------------------------------------------------
+            // Focus Requirement
+            // ----------------------------------------------------
+
+            requirement.focus();
+
+        }
+
+
+        catch (errorObject) {
+
+            showFileError(
+                errorObject.message
+            );
+
+
+            requirement.disabled =
+                true;
+
+
+            generateButton.disabled =
+                true;
+
+            // Disable voice input because no valid database is loaded.
+            setVoiceInputEnabled(false);
+
+        }
+
+
+        finally {
+
+            processLoading.classList.add(
+                "hidden"
+            );
+
+
+            processButton.disabled =
+                false;
+
+        }
+
+    }
+
+
+    // ============================================================
+    // DISPLAY DYNAMIC SCHEMA
+    // ============================================================
+
+    function displaySchema(
+        data
+    ) {
+
+        const schemaCard =
+            document.getElementById(
+                "schemaCard"
+            );
+
+
+        const tableName =
+            document.getElementById(
+                "tableName"
+            );
+
+
+        const processedRowCount =
+            document.getElementById(
+                "processedRowCount"
+            );
+
+
+        const schemaColumns =
+            document.getElementById(
+                "schemaColumns"
+            );
+
+
+        // --------------------------------------------------------
+        // Clear Previous Schema
+        // --------------------------------------------------------
+
+        schemaColumns.innerHTML =
+            "";
+
+
+        // --------------------------------------------------------
+        // Display Table Name
+        // --------------------------------------------------------
+
+        tableName.textContent =
+            data.table_name ||
+            "uploaded_data";
+
+
+        // --------------------------------------------------------
+        // Display Row Count
+        // --------------------------------------------------------
+
+        const totalRows =
+            data.row_count || 0;
+
+
+        processedRowCount.textContent =
+
+            totalRows === 1
+                ? "1 row loaded"
+                : `${totalRows} rows loaded`;
+
+
+        // --------------------------------------------------------
+        // Use data.columns so original CSV order is preserved.
+        // --------------------------------------------------------
+
+        const orderedColumns =
+            Array.isArray(
+                data.columns
+            )
+                ? data.columns
+                : [];
+
+
+        // --------------------------------------------------------
+        // Get Data Types From Schema
+        // --------------------------------------------------------
+
+        const schema =
+            data.schema || {};
+
+
+        const tableSchema =
+            schema[
+                data.table_name
+            ] || {};
+
+
+        const columnTypes =
+            tableSchema.columns || {};
+
+
+        // --------------------------------------------------------
+        // Display Columns In CSV ORDER
+        // --------------------------------------------------------
+
+        orderedColumns.forEach(
+            function(columnName) {
+
+                const column =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                column.className =
+                    "column";
+
+
+                const name =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                name.textContent =
+                    columnName;
+
+
+                const type =
+                    document.createElement(
+                        "small"
+                    );
+
+
+                type.textContent =
+                    columnTypes[
+                        columnName
+                    ] || "TEXT";
+
+
+                column.appendChild(
+                    name
+                );
+
+
+                column.appendChild(
+                    type
+                );
+
+
+                schemaColumns.appendChild(
+                    column
+                );
+
+            }
+        );
+
+
+        // --------------------------------------------------------
+        // Show Schema Card
+        // --------------------------------------------------------
+
+        schemaCard.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    // ============================================================
+    // GENERATE SQL
+    // ============================================================
+
+    async function generateSQL() {
+
+        const requirementElement =
+            document.getElementById(
+                "requirement"
+            );
+
+
+        const generateButton =
+            document.getElementById(
+                "generateButton"
+            );
+
+
+        const loading =
+            document.getElementById(
+                "loading"
+            );
+
+
+        const error =
+            document.getElementById(
+                "error"
+            );
+
+
+        const queryHistory =
+            document.getElementById(
+                "queryHistory"
+            );
+
+
+        const requirement =
+            requirementElement.value.trim();
+
+
+        // Groq is the only AI provider.
+        const provider = "groq";
+
+
+        // Stop any previous result-summary speech before starting
+        // a new query.
+        stopResultSummarySpeech();
+
+
+        // --------------------------------------------------------
+        // Validate Input
+        // --------------------------------------------------------
+
+        if (!requirement) {
+
+            showError(
+                "Please enter a database requirement."
+            );
+
+            return;
+
+        }
+
+
+        // --------------------------------------------------------
+        // Reset Error
+        // --------------------------------------------------------
+
+        error.classList.add(
+            "hidden"
+        );
+
+
+        // --------------------------------------------------------
+        // Show Loading
+        // --------------------------------------------------------
+
+        loading.textContent =
+            "Groq is generating SQL, fetching data, and summarizing the result...";
+
+
+        loading.classList.remove(
+            "hidden"
+        );
+
+
+        generateButton.disabled =
+            true;
+
+
+        try {
+
+            // ----------------------------------------------------
+            // Send Request to Flask
+            // ----------------------------------------------------
+
+            const response =
+                await fetch(
+                    "/generate-sql",
+                    {
+
+                        method: "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json"
+
+                        },
+
+                        body: JSON.stringify({
+
+                            requirement:
+                                requirement,
+
+                            provider:
+                                "groq"
+
+                        })
+
+                    }
+                );
+
+
+            // ----------------------------------------------------
+            // Convert Response to JSON
+            // ----------------------------------------------------
+
+            const data =
+                await response.json();
+
+
+            // ----------------------------------------------------
+            // Handle Backend Error
+            // ----------------------------------------------------
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                throw new Error(
+
+                    data.error ||
+                    "Failed to generate SQL."
+
+                );
+
+            }
+
+
+            // ----------------------------------------------------
+            // Increment Query Number
+            // ----------------------------------------------------
+
+            queryNumber++;
+
+
+            // ----------------------------------------------------
+            // Create New Query Result Card
+            // ----------------------------------------------------
+
+            const queryCard =
+                createQueryResultCard(
+                    data,
+                    queryNumber,
+                    requirement
+                );
+
+
+            // ----------------------------------------------------
+            // Insert NEWEST query at the TOP
+            // ----------------------------------------------------
+
+            queryHistory.insertBefore(
+                queryCard,
+                queryHistory.firstChild
+            );
+
+
+            
+
+            // --------------------------------------------------------
+            // Scroll to the newly generated Result Summary
+            // --------------------------------------------------------
+            // The card must first be inserted into the DOM so that
+            // the browser can calculate the Result Summary position.
+            const newResultSummarySection =
+                queryCard.querySelector(
+                    ".result-summary-section"
+                );
+
+            if (newResultSummarySection) {
+                setTimeout(function() {
+                    // Use a small custom animation so the scroll is
+                    // slightly slower than the browser's default smooth scroll.
+                    const startPosition = window.pageYOffset;
+                    const targetPosition =
+                        newResultSummarySection.getBoundingClientRect().top +
+                        window.pageYOffset -
+                        20;
+                    const distance =
+                        targetPosition - startPosition;
+                    const duration = 900;
+                    const startTime = performance.now();
+
+                    function animateResultScroll(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(
+                            elapsed / duration,
+                            1
+                        );
+
+                        // Ease-in-out for a gentle start and finish.
+                        const easedProgress =
+                            progress < 0.5
+                                ? 2 * progress * progress
+                                : 1 - Math.pow(
+                                    -2 * progress + 2,
+                                    2
+                                ) / 2;
+
+                        window.scrollTo(
+                            0,
+                            startPosition +
+                            distance * easedProgress
+                        );
+
+                        if (progress < 1) {
+                            requestAnimationFrame(
+                                animateResultScroll
+                            );
+                        }
+                    }
+
+                    requestAnimationFrame(
+                        animateResultScroll
+                    );
+                }, 50);
+            }
+
+// ----------------------------------------------------
+            // Clear Requirement Box
+            // ----------------------------------------------------
+
+            requirementElement.value =
+                "";
+
+
+            // ----------------------------------------------------
+            // Focus Requirement Box
+            // ----------------------------------------------------
+
+            requirementElement.focus();
+
+        }
+
+
+        catch (errorObject) {
+
+            showError(
+                errorObject.message
+            );
+
+        }
+
+
+        finally {
+
+            loading.classList.add(
+                "hidden"
+            );
+
+
+            generateButton.disabled =
+                false;
+
+        }
+
+    }
+
+
+    // ============================================================
+    // RENDER ASSISTANT-STYLE RESULT RESPONSE
+    // ============================================================
+
+    function escapeHTML(value) {
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    function renderInlineMarkdown(text) {
+
+        let html =
+            escapeHTML(text);
+
+        // Inline code
+        html = html.replace(
+            /`([^`]+)`/g,
+            "<code>$1</code>"
+        );
+
+        // Bold
+        html = html.replace(
+            /\*\*([^*]+)\*\*/g,
+            "<strong>$1</strong>"
+        );
+
+        return html;
+
+    }
+
+
+    function renderAssistantResponse(text) {
+
+        const normalized =
+            String(text)
+                .replace(/\r\n/g, "\n")
+                .replace(/\r/g, "\n")
+                .trim();
+
+        if (!normalized) {
+            return "";
+        }
+
+        const lines =
+            normalized.split("\n");
+
+        let html = "";
+        let paragraphLines = [];
+        let listType = null;
+        let listItems = [];
+
+
+        function flushParagraph() {
+
+            if (paragraphLines.length === 0) {
+                return;
+            }
+
+            const paragraphText =
+                paragraphLines.join(" ").trim();
+
+            if (paragraphText) {
+
+                html +=
+                    "<p>" +
+                    renderInlineMarkdown(
+                        paragraphText
+                    ) +
+                    "</p>";
+
+            }
+
+            paragraphLines = [];
+
+        }
+
+
+        function flushList() {
+
+            if (!listType ||
+                listItems.length === 0) {
+
+                listType = null;
+                listItems = [];
+                return;
+            }
+
+            html +=
+                "<" + listType + ">";
+
+            listItems.forEach(
+                function(item) {
+
+                    html +=
+                        "<li>" +
+                        renderInlineMarkdown(item) +
+                        "</li>";
+
+                }
+            );
+
+            html +=
+                "</" + listType + ">";
+
+            listType = null;
+            listItems = [];
+
+        }
+
+
+        lines.forEach(
+            function(line) {
+
+                const trimmed =
+                    line.trim();
+
+                if (!trimmed) {
+
+                    flushParagraph();
+                    flushList();
+                    return;
+
+                }
+
+
+                // Unordered Markdown list:
+                // - item
+                // * item
+                // • item
+                const unorderedMatch =
+                    trimmed.match(
+                        /^[-*•]\s+(.+)$/
+                    );
+
+                if (unorderedMatch) {
+
+                    flushParagraph();
+
+                    if (listType &&
+                        listType !== "ul") {
+
+                        flushList();
+
+                    }
+
+                    listType = "ul";
+
+                    listItems.push(
+                        unorderedMatch[1]
+                    );
+
+                    return;
+
+                }
+
+
+                // Ordered Markdown list:
+                // 1. item
+                const orderedMatch =
+                    trimmed.match(
+                        /^\d+[.)]\s+(.+)$/
+                    );
+
+                if (orderedMatch) {
+
+                    flushParagraph();
+
+                    if (listType &&
+                        listType !== "ol") {
+
+                        flushList();
+
+                    }
+
+                    listType = "ol";
+
+                    listItems.push(
+                        orderedMatch[1]
+                    );
+
+                    return;
+
+                }
+
+
+                // Normal paragraph text.
+                flushList();
+
+                paragraphLines.push(
+                    trimmed
+                );
+
+            }
+        );
+
+
+        flushParagraph();
+        flushList();
+
+        return html;
+
+    }
+
+
+    // ============================================================
+    // CREATE QUERY RESULT CARD
+    // ============================================================
+
+    function createQueryResultCard(
+        data,
+        number,
+        requirement
+    ) {
+
+        // --------------------------------------------------------
+        // Main Card
+        // --------------------------------------------------------
+
+        const result =
+            document.createElement(
+                "section"
+            );
+
+
+        result.className =
+            "card result query-result-card";
+
+
+        // --------------------------------------------------------
+        // Query Header
+        // --------------------------------------------------------
+
+        const queryHeader =
+            document.createElement(
+                "div"
+            );
+
+
+        queryHeader.className =
+            "query-history-header";
+
+
+        const queryHeaderTop =
+            document.createElement(
+                "div"
+            );
+
+
+        queryHeaderTop.className =
+            "query-header-top";
+
+
+        const queryTitle =
+            document.createElement(
+                "h2"
+            );
+
+
+        queryTitle.textContent =
+            `Query ${number}`;
+
+
+        const providerBadge =
+            document.createElement(
+                "span"
+            );
+
+
+        providerBadge.className =
+            "provider-badge";
+
+
+        providerBadge.textContent =
+            "Groq API";
+
+
+        queryHeaderTop.appendChild(
+            queryTitle
+        );
+
+
+        queryHeaderTop.appendChild(
+            providerBadge
+        );
+
+
+        queryHeader.appendChild(
+            queryHeaderTop
+        );
+
+
+        // --------------------------------------------------------
+        // Requirement Display
+        // --------------------------------------------------------
+
+        const requirementSection =
+            document.createElement(
+                "div"
+            );
+
+
+        requirementSection.className =
+            "info-section";
+
+
+        const requirementTitle =
+            document.createElement(
+                "h3"
+            );
+
+
+        requirementTitle.textContent =
+            "Database Requirement";
+
+
+        const requirementText =
+            document.createElement(
+                "p"
+            );
+
+
+        requirementText.textContent =
+            requirement;
+
+
+        requirementSection.appendChild(
+            requirementTitle
+        );
+
+
+        requirementSection.appendChild(
+            requirementText
+        );
+
+
+        result.appendChild(
+            queryHeader
+        );
+
+
+        result.appendChild(
+            requirementSection
+        );
+
+
+        // --------------------------------------------------------
+        // Generated SQL
+        // --------------------------------------------------------
+
+        const sqlHeader =
+            document.createElement(
+                "div"
+            );
+
+
+        sqlHeader.className =
+            "result-header";
+
+
+        const sqlTitle =
+            document.createElement(
+                "h2"
+            );
+
+
+        sqlTitle.textContent =
+            "Generated SQL";
+
+
+        const copyButton =
+            document.createElement(
+                "button"
+            );
+
+
+        copyButton.className =
+            "copy-button";
+
+
+        copyButton.textContent =
+            "Copy";
+
+
+        const sqlOutput =
+            document.createElement(
+                "pre"
+            );
+
+
+        sqlOutput.textContent =
+            data.sql || "";
+
+
+        copyButton.addEventListener(
+            "click",
+            function() {
+
+                copySQLFromCard(
+                    sqlOutput,
+                    copyButton
+                );
+
+            }
+        );
+
+
+        sqlHeader.appendChild(
+            sqlTitle
+        );
+
+
+        sqlHeader.appendChild(
+            copyButton
+        );
+
+
+        result.appendChild(
+            sqlHeader
+        );
+
+
+        result.appendChild(
+            sqlOutput
+        );
+
+
+        // --------------------------------------------------------
+        // Explanation
+        // --------------------------------------------------------
+
+        const explanationSection =
+            document.createElement(
+                "div"
+            );
+
+
+        explanationSection.className =
+            "info-section";
+
+
+        const explanationTitle =
+            document.createElement(
+                "h3"
+            );
+
+
+        explanationTitle.textContent =
+            "Explanation";
+
+
+        const explanationText =
+            document.createElement(
+                "p"
+            );
+
+
+        explanationText.textContent =
+
+            data.explanation ||
+            "No explanation provided.";
+
+
+        explanationSection.appendChild(
+            explanationTitle
+        );
+
+
+        explanationSection.appendChild(
+            explanationText
+        );
+
+
+        result.appendChild(
+            explanationSection
+        );
+
+
+        // --------------------------------------------------------
+        // Tables Used
+        // --------------------------------------------------------
+
+        result.appendChild(
+            createInfoTagSection(
+                "Tables Used",
+                data.tables_used
+            )
+        );
+
+
+        // --------------------------------------------------------
+        // Columns Used
+        // --------------------------------------------------------
+
+        result.appendChild(
+            createInfoTagSection(
+                "Columns Used",
+                data.columns_used
+            )
+        );
+
+
+        // --------------------------------------------------------
+        // SQL Operations
+        // --------------------------------------------------------
+
+        result.appendChild(
+            createInfoTagSection(
+                "SQL Operations",
+                data.operations
+            )
+        );
+
+
+        // --------------------------------------------------------
+        // Result Summary
+        // --------------------------------------------------------
+
+        const resultSummarySection =
+            document.createElement(
+                "div"
+            );
+
+        resultSummarySection.className =
+            "info-section result-summary-section";
+
+
+        // --------------------------------------------------------
+        // Result Summary Header
+        // --------------------------------------------------------
+
+        const resultSummaryHeader =
+            document.createElement(
+                "div"
+            );
+
+        resultSummaryHeader.className =
+            "result-summary-header";
+
+
+        const resultSummaryTitle =
+            document.createElement(
+                "h3"
+            );
+
+        resultSummaryTitle.textContent =
+            "Result Summary";
+
+
+        const resultSummarySpeakerButton =
+            document.createElement(
+                "button"
+            );
+
+        resultSummarySpeakerButton.type =
+            "button";
+
+        resultSummarySpeakerButton.className =
+            "result-summary-speaker-button";
+
+        resultSummarySpeakerButton.textContent =
+            "🔊";
+
+        resultSummarySpeakerButton.setAttribute(
+            "aria-label",
+            "Read result summary aloud"
+        );
+
+        resultSummarySpeakerButton.setAttribute(
+            "title",
+            "Read result summary aloud"
+        );
+
+
+        const resultSummary =
+            (
+                data.result_summary ||
+                "No result summary was generated."
+            ).trim();
+
+
+        resultSummarySpeakerButton.addEventListener(
+            "click",
+            function() {
+
+                speakResultSummary(
+                    resultSummary,
+                    resultSummarySpeakerButton,
+                    false
+                );
+
+            }
+        );
+
+
+        resultSummaryHeader.appendChild(
+            resultSummaryTitle
+        );
+
+        resultSummaryHeader.appendChild(
+            resultSummarySpeakerButton
+        );
+
+
+        // --------------------------------------------------------
+        // Result Summary Content
+        // --------------------------------------------------------
+
+        const resultSummaryText =
+            document.createElement(
+                "div"
+            );
+
+        resultSummaryText.className =
+            "result-summary-content";
+
+        resultSummaryText.innerHTML =
+            renderAssistantResponse(
+                resultSummary
+            );
+
+
+        resultSummarySection.appendChild(
+            resultSummaryHeader
+        );
+
+        resultSummarySection.appendChild(
+            resultSummaryText
+        );
+
+        result.appendChild(
+            resultSummarySection
+        );
+
+
+        // --------------------------------------------------------
+        // Automatically speak the result summary.
+        //
+        // This uses the browser's Speech Synthesis API and does
+        // NOT make another AI/API request.
+        //
+        // Browsers may block automatic speech when it is not
+        // directly triggered by a user gesture. The speaker
+        // button above remains available as the manual fallback.
+        // --------------------------------------------------------
+
+        setTimeout(
+            function() {
+
+                speakResultSummary(
+                    resultSummary,
+                    resultSummarySpeakerButton,
+                    true
+                );
+
+            },
+            100
+        );
+
+
+        // --------------------------------------------------------
+        // Query Result
+        // --------------------------------------------------------
+
+        const queryResultSection =
+            document.createElement(
+                "div"
+            );
+
+
+        queryResultSection.className =
+            "query-result-section";
+
+
+        const queryResultHeader =
+            document.createElement(
+                "div"
+            );
+
+
+        queryResultHeader.className =
+            "query-result-header";
+
+
+        const queryResultTitleContainer =
+            document.createElement(
+                "div"
+            );
+
+
+        const queryResultTitle =
+            document.createElement(
+                "h3"
+            );
+
+
+        queryResultTitle.textContent =
+            "Query Result";
+
+
+        const rowCount =
+            document.createElement(
+                "span"
+            );
+
+
+        rowCount.className =
+            "row-count";
+
+
+        const queryResult =
+            data.result || {};
+
+
+        const resultColumns =
+            Array.isArray(
+                queryResult.columns
+            )
+                ? queryResult.columns
+                : [];
+
+
+        const resultRows =
+            Array.isArray(
+                queryResult.rows
+            )
+                ? queryResult.rows
+                : [];
+
+
+        const totalRows =
+            queryResult.row_count !== undefined
+                ? queryResult.row_count
+                : resultRows.length;
+
+
+        rowCount.textContent =
+
+            totalRows === 1
+                ? "1 row"
+                : `${totalRows} rows`;
+
+
+        queryResultTitleContainer.appendChild(
+            queryResultTitle
+        );
+
+
+        queryResultTitleContainer.appendChild(
+            rowCount
+        );
+
+
+        queryResultHeader.appendChild(
+            queryResultTitleContainer
+        );
+
+
+        queryResultSection.appendChild(
+            queryResultHeader
+        );
+
+
+        // --------------------------------------------------------
+        // Result Table
+        // --------------------------------------------------------
+
+        const resultTableContainer =
+            document.createElement(
+                "div"
+            );
+
+
+        resultTableContainer.className =
+            "result-table-container";
+
+
+        displayQueryResult(
+            resultTableContainer,
+            resultColumns,
+            resultRows
+        );
+
+
+        queryResultSection.appendChild(
+            resultTableContainer
+        );
+
+
+        result.appendChild(
+            queryResultSection
+        );
+
+
+        return result;
+
+    }
+
+
+    // ============================================================
+    // CREATE INFO TAG SECTION
+    // ============================================================
+
+    function createInfoTagSection(
+        title,
+        items
+    ) {
+
+        const section =
+            document.createElement(
+                "div"
+            );
+
+
+        section.className =
+            "info-section";
+
+
+        const heading =
+            document.createElement(
+                "h3"
+            );
+
+
+        heading.textContent =
+            title;
+
+
+        const container =
+            document.createElement(
+                "div"
+            );
+
+
+        container.className =
+            "tag-container";
+
+
+        displayTags(
+            container,
+            items
+        );
+
+
+        section.appendChild(
+            heading
+        );
+
+
+        section.appendChild(
+            container
+        );
+
+
+        return section;
+
+    }
+
+
+    // ============================================================
+    // DISPLAY TAGS
+    // ============================================================
+
+    function displayTags(
+        container,
+        items
+    ) {
+
+        if (
+            !Array.isArray(items) ||
+            items.length === 0
+        ) {
+
+            const emptyTag =
+                document.createElement(
+                    "span"
+                );
+
+
+            emptyTag.className =
+                "tag empty-tag";
+
+
+            emptyTag.textContent =
+                "None";
+
+
+            container.appendChild(
+                emptyTag
+            );
+
+
+            return;
+
+        }
+
+
+        items.forEach(
+            function(item) {
+
+                const tag =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                tag.className =
+                    "tag";
+
+
+                tag.textContent =
+                    item;
+
+
+                container.appendChild(
+                    tag
+                );
+
+            }
+        );
+
+    }
+
+
+    // ============================================================
+    // DISPLAY QUERY RESULT
+    // ============================================================
+
+    function displayQueryResult(
+        container,
+        columns,
+        rows
+    ) {
+
+        // --------------------------------------------------------
+        // Clear Container
+        // --------------------------------------------------------
+
+        container.innerHTML =
+            "";
+
+
+        // --------------------------------------------------------
+        // No Columns
+        // --------------------------------------------------------
+
+        if (
+            !Array.isArray(columns) ||
+            columns.length === 0
+        ) {
+
+            const message =
+                document.createElement(
+                    "div"
+                );
+
+
+            message.className =
+                "no-result";
+
+
+            message.textContent =
+                "No result data available.";
+
+
+            container.appendChild(
+                message
+            );
+
+
+            return;
+
+        }
+
+
+        // --------------------------------------------------------
+        // Create Table Wrapper
+        // --------------------------------------------------------
+
+        const tableWrapper =
+            document.createElement(
+                "div"
+            );
+
+
+        tableWrapper.className =
+            "table-scroll";
+
+
+        // --------------------------------------------------------
+        // Create Table
+        // --------------------------------------------------------
+
+        const table =
+            document.createElement(
+                "table"
+            );
+
+
+        table.className =
+            "query-table";
+
+
+        // --------------------------------------------------------
+        // Create Table Header
+        // --------------------------------------------------------
+
+        const thead =
+            document.createElement(
+                "thead"
+            );
+
+
+        const headerRow =
+            document.createElement(
+                "tr"
+            );
+
+
+        columns.forEach(
+            function(column) {
+
+                const th =
+                    document.createElement(
+                        "th"
+                    );
+
+
+                th.textContent =
+                    column;
+
+
+                headerRow.appendChild(
+                    th
+                );
+
+            }
+        );
+
+
+        thead.appendChild(
+            headerRow
+        );
+
+
+        table.appendChild(
+            thead
+        );
+
+
+        // --------------------------------------------------------
+        // Create Table Body
+        // --------------------------------------------------------
+
+        const tbody =
+            document.createElement(
+                "tbody"
+            );
+
+
+        if (
+            !Array.isArray(rows) ||
+            rows.length === 0
+        ) {
+
+            const emptyRow =
+                document.createElement(
+                    "tr"
+                );
+
+
+            const emptyCell =
+                document.createElement(
+                    "td"
+                );
+
+
+            emptyCell.colSpan =
+                columns.length;
+
+
+            emptyCell.className =
+                "no-data";
+
+
+            emptyCell.textContent =
+                "Query returned no rows.";
+
+
+            emptyRow.appendChild(
+                emptyCell
+            );
+
+
+            tbody.appendChild(
+                emptyRow
+            );
+
+        }
+
+        else {
+
+            rows.forEach(
+                function(row) {
+
+                    const tableRow =
+                        document.createElement(
+                            "tr"
+                        );
+
+
+                    columns.forEach(
+                        function(
+                            column,
+                            index
+                        ) {
+
+                            const td =
+                                document.createElement(
+                                    "td"
+                                );
+
+
+                            const value =
+                                row[index];
+
+
+                            if (
+                                value === null ||
+                                value === undefined
+                            ) {
+
+                                td.textContent =
+                                    "NULL";
+
+                            }
+
+                            else {
+
+                                td.textContent =
+                                    value;
+
+                            }
+
+
+                            tableRow.appendChild(
+                                td
+                            );
+
+                        }
+                    );
+
+
+                    tbody.appendChild(
+                        tableRow
+                    );
+
+                }
+            );
+
+        }
+
+
+        table.appendChild(
+            tbody
+        );
+
+
+        tableWrapper.appendChild(
+            table
+        );
+
+
+        container.appendChild(
+            tableWrapper
+        );
+
+    }
+
+
+    // ============================================================
+    // COPY SQL FROM SPECIFIC CARD
+    // ============================================================
+
+    async function copySQLFromCard(
+        sqlElement,
+        button
+    ) {
+
+        const sql =
+            sqlElement.textContent;
+
+
+        if (!sql) {
+
+            return;
+
+        }
+
+
+        try {
+
+            await navigator.clipboard.writeText(
+                sql
+            );
+
+
+            const originalText =
+                button.textContent;
+
+
+            button.textContent =
+                "Copied!";
+
+
+            setTimeout(
+                function() {
+
+                    button.textContent =
+                        originalText;
+
+                },
+                1500
+            );
+
+        }
+
+
+        catch (error) {
+
+            console.error(
+                "Could not copy SQL:",
+                error
+            );
+
+        }
+
+    }
+
+
+    // ============================================================
+    // SHOW FILE ERROR
+    // ============================================================
+
+    function showFileError(
+        message
+    ) {
+
+        const error =
+            document.getElementById(
+                "fileError"
+            );
+
+
+        error.textContent =
+            message;
+
+
+        error.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    // ============================================================
+    // SHOW SQL ERROR
+    // ============================================================
+
+    function showError(
+        message
+    ) {
+
+        const error =
+            document.getElementById(
+                "error"
+            );
+
+
+        error.textContent =
+            message;
+
+
+        error.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    // ============================================================
+    // CTRL + ENTER SHORTCUT
+    // ============================================================
+
+    document
+        .getElementById("requirement")
+        .addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.ctrlKey &&
+                    event.key === "Enter"
+                ) {
+
+                    generateSQL();
+
+                }
+
+            }
+        );
+
+
+</script>
+
+
+</body>
+
+</html>

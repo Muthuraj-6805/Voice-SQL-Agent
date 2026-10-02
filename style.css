@@ -1,0 +1,1192 @@
+/* ================================================================
+   GLOBAL
+   ================================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f5f7fb,
+            #e9edf5
+        );
+
+    color: #1f2937;
+
+    min-height: 100vh;
+
+    padding: 40px 20px;
+}
+
+
+/* ================================================================
+   MAIN CONTAINER
+   ================================================================ */
+
+.container {
+    width: 100%;
+    max-width: 900px;
+
+    margin: 0 auto;
+}
+
+
+/* ================================================================
+   HEADER
+   ================================================================ */
+
+.header {
+    text-align: center;
+
+    margin-bottom: 30px;
+}
+
+
+.header h1 {
+    font-size: 36px;
+
+    font-weight: 700;
+
+    margin-bottom: 10px;
+
+    color: #111827;
+}
+
+
+.header p {
+    font-size: 16px;
+
+    color: #6b7280;
+
+    line-height: 1.6;
+}
+
+
+/* ================================================================
+   MAIN CARD
+   ================================================================ */
+
+.card {
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 30px;
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.08);
+
+    margin-bottom: 25px;
+}
+
+
+/* ================================================================
+   INPUT SECTION
+   ================================================================ */
+
+.section {
+    margin-bottom: 20px;
+}
+
+
+.section label {
+    display: block;
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    margin-bottom: 10px;
+
+    color: #374151;
+}
+
+
+textarea {
+    width: 100%;
+
+    min-height: 140px;
+
+    resize: vertical;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    font-family: inherit;
+
+    font-size: 15px;
+
+    line-height: 1.6;
+
+    color: #111827;
+
+    background: #ffffff;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+
+textarea:focus {
+    border-color: #6366f1;
+
+    box-shadow:
+        0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+
+textarea:disabled {
+    background: #f9fafb;
+
+    color: #9ca3af;
+
+    cursor: not-allowed;
+}
+
+
+textarea::placeholder {
+    color: #9ca3af;
+}
+
+
+/* ================================================================
+   FILE INPUT
+   ================================================================ */
+
+#fileInput {
+    width: 100%;
+
+    padding: 12px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 10px;
+
+    background: #f9fafb;
+
+    color: #374151;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+
+#fileInput:hover {
+    border-color: #9ca3af;
+}
+
+
+#fileInput:focus {
+    outline: none;
+
+    border-color: #6366f1;
+
+    box-shadow:
+        0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+
+/* ================================================================
+   FILE HELP
+   ================================================================ */
+
+.file-help {
+    margin-top: 8px;
+
+    font-size: 12px;
+
+    color: #6b7280;
+
+    line-height: 1.5;
+}
+
+
+/* ================================================================
+   PROCESS BUTTON
+   ================================================================ */
+
+#processButton {
+    width: 100%;
+
+    border: none;
+
+    border-radius: 10px;
+
+    padding: 14px 20px;
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    color: #ffffff;
+
+    background: #059669;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+
+#processButton:hover {
+    background: #047857;
+}
+
+
+#processButton:active {
+    transform: scale(0.99);
+}
+
+
+#processButton:disabled {
+    background: #9ca3af;
+
+    cursor: not-allowed;
+}
+
+
+/* ================================================================
+   DATABASE STATUS
+   ================================================================ */
+
+.database-status {
+    margin-top: 18px;
+
+    padding: 12px 15px;
+
+    border-radius: 8px;
+
+    background: #ecfdf5;
+
+    border: 1px solid #a7f3d0;
+
+    color: #047857;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+
+    font-weight: 500;
+}
+
+
+/* ================================================================
+   GENERATE BUTTON
+   ================================================================ */
+
+#generateButton {
+    width: 100%;
+
+    border: none;
+
+    border-radius: 10px;
+
+    padding: 14px 20px;
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    color: #ffffff;
+
+    background: #4f46e5;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+
+#generateButton:hover {
+    background: #4338ca;
+}
+
+
+#generateButton:active {
+    transform: scale(0.99);
+}
+
+
+#generateButton:disabled {
+    background: #9ca3af;
+
+    cursor: not-allowed;
+}
+
+
+/* ================================================================
+   LOADING
+   ================================================================ */
+
+.loading {
+    text-align: center;
+
+    margin-top: 18px;
+
+    font-size: 14px;
+
+    color: #6366f1;
+
+    font-weight: 600;
+}
+
+
+/* ================================================================
+   ERROR
+   ================================================================ */
+
+.error {
+    margin-top: 18px;
+
+    padding: 12px 15px;
+
+    border-radius: 8px;
+
+    background: #fef2f2;
+
+    border: 1px solid #fecaca;
+
+    color: #b91c1c;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+/* ================================================================
+   QUERY HISTORY
+   ================================================================ */
+
+.query-history {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 25px;
+
+    width: 100%;
+}
+
+
+.query-result-card {
+    margin-top: 0;
+
+    margin-bottom: 0;
+}
+
+
+.query-history-header {
+    padding: 18px;
+
+    background: #f3f4f6;
+
+    border-bottom: 1px solid #d1d5db;
+}
+
+
+.query-header-top {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+}
+
+
+.query-history-header h2 {
+    font-size: 18px;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    margin: 0;
+}
+
+
+/* ================================================================
+   GROQ PROVIDER BADGE
+   ================================================================ */
+
+.provider-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 6px 10px;
+
+    border-radius: 20px;
+
+    background: #eef2ff;
+
+    border: 1px solid #c7d2fe;
+
+    color: #4338ca;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+/* ================================================================
+   RESULT
+   ================================================================ */
+
+.result {
+    margin-top: 0;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    background: #ffffff;
+}
+
+
+/* ================================================================
+   SQL HEADER
+   ================================================================ */
+
+.result-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 14px 16px;
+
+    background: #f3f4f6;
+
+    border-bottom: 1px solid #d1d5db;
+}
+
+
+.result-header h2 {
+    font-size: 16px;
+
+    font-weight: 600;
+
+    color: #374151;
+}
+
+
+/* ================================================================
+   COPY BUTTON
+   ================================================================ */
+
+.copy-button {
+    border: none;
+
+    border-radius: 6px;
+
+    padding: 7px 12px;
+
+    font-size: 13px;
+
+    color: #ffffff;
+
+    background: #374151;
+
+    cursor: pointer;
+
+    transition: background 0.2s;
+}
+
+
+.copy-button:hover {
+    background: #111827;
+}
+
+
+/* ================================================================
+   SQL OUTPUT
+   ================================================================ */
+
+.result pre {
+    padding: 18px;
+
+    margin: 0;
+
+    background: #111827;
+
+    color: #e5e7eb;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 14px;
+
+    line-height: 1.7;
+
+    white-space: pre-wrap;
+
+    word-break: break-word;
+
+    overflow-x: auto;
+}
+
+
+/* ================================================================
+   STRUCTURED INFORMATION SECTIONS
+   ================================================================ */
+
+.info-section {
+    padding: 18px;
+
+    border-top: 1px solid #e5e7eb;
+
+    background: #ffffff;
+}
+
+
+.info-section h3 {
+    font-size: 14px;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    margin-bottom: 10px;
+}
+
+
+.info-section p {
+    font-size: 14px;
+
+    line-height: 1.6;
+
+    color: #6b7280;
+}
+
+
+/* ================================================================
+   TAG CONTAINER
+   ================================================================ */
+
+.tag-container {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+
+/* ================================================================
+   TAGS
+   ================================================================ */
+
+.tag {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 6px 10px;
+
+    border-radius: 6px;
+
+    background: #eef2ff;
+
+    color: #4338ca;
+
+    border: 1px solid #c7d2fe;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 13px;
+
+    font-weight: 500;
+}
+
+
+/* ================================================================
+   EMPTY TAG
+   ================================================================ */
+
+.empty-tag {
+    background: #f3f4f6;
+
+    color: #9ca3af;
+
+    border-color: #e5e7eb;
+}
+
+
+/* ================================================================
+   QUERY RESULT SECTION
+   ================================================================ */
+
+.query-result-section {
+    border-top: 1px solid #e5e7eb;
+
+    background: #ffffff;
+}
+
+
+/* ================================================================
+   QUERY RESULT HEADER
+   ================================================================ */
+
+.query-result-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 18px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+
+.query-result-header h3 {
+    font-size: 16px;
+
+    font-weight: 600;
+
+    color: #374151;
+
+    margin-bottom: 4px;
+}
+
+
+/* ================================================================
+   ROW COUNT
+   ================================================================ */
+
+.row-count {
+    display: inline-block;
+
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+
+/* ================================================================
+   RESULT TABLE CONTAINER
+   ================================================================ */
+
+.result-table-container {
+    width: 100%;
+
+    padding: 18px;
+}
+
+
+/* ================================================================
+   TABLE SCROLL
+   ================================================================ */
+
+.table-scroll {
+    width: 100%;
+
+    overflow-x: auto;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+}
+
+
+/* ================================================================
+   QUERY TABLE
+   ================================================================ */
+
+.query-table {
+    width: 100%;
+
+    min-width: 600px;
+
+    border-collapse: collapse;
+
+    background: #ffffff;
+}
+
+
+/* ================================================================
+   TABLE HEADER
+   ================================================================ */
+
+.query-table thead {
+    background: #f3f4f6;
+}
+
+
+.query-table th {
+    padding: 12px 14px;
+
+    border-bottom: 1px solid #d1d5db;
+
+    text-align: left;
+
+    white-space: nowrap;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #374151;
+}
+
+
+/* ================================================================
+   TABLE CELLS
+   ================================================================ */
+
+.query-table td {
+    padding: 11px 14px;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    white-space: nowrap;
+
+    font-size: 13px;
+
+    color: #4b5563;
+}
+
+
+/* ================================================================
+   LAST ROW
+   ================================================================ */
+
+.query-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* ================================================================
+   TABLE ROW HOVER
+   ================================================================ */
+
+.query-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+
+/* ================================================================
+   NO DATA
+   ================================================================ */
+
+.no-data {
+    text-align: center !important;
+
+    padding: 25px !important;
+
+    color: #9ca3af !important;
+
+    font-style: italic;
+}
+
+
+/* ================================================================
+   NO RESULT
+   ================================================================ */
+
+.no-result {
+    padding: 20px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: #f9fafb;
+
+    text-align: center;
+
+    font-size: 14px;
+
+    color: #9ca3af;
+}
+
+
+/* ================================================================
+   SCHEMA CARD
+   ================================================================ */
+
+.schema-card {
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 25px;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.06);
+
+    margin-bottom: 25px;
+}
+
+
+.schema-card h2 {
+    font-size: 18px;
+
+    margin-bottom: 18px;
+
+    color: #111827;
+}
+
+
+/* ================================================================
+   TABLE NAME
+   ================================================================ */
+
+.table-name {
+    display: inline-block;
+
+    padding: 7px 12px;
+
+    border-radius: 7px;
+
+    background: #eef2ff;
+
+    color: #4338ca;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    margin-bottom: 8px;
+}
+
+
+/* ================================================================
+   SCHEMA ROW COUNT
+   ================================================================ */
+
+.schema-row-count {
+    display: block;
+
+    margin-bottom: 15px;
+
+    font-size: 13px;
+
+    color: #6b7280;
+}
+
+
+/* ================================================================
+   DATABASE COLUMNS
+   ================================================================ */
+
+.columns {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+}
+
+
+.column {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+    padding: 12px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: #f9fafb;
+}
+
+
+.column span {
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    color: #374151;
+}
+
+
+.column small {
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+
+
+/* ================================================================
+   VOICE INPUT
+   ================================================================ */
+
+.voice-input-wrapper {
+    width: 100%;
+}
+
+.voice-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.voice-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 105px;
+    padding: 9px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #111827;
+    cursor: pointer;
+    font: inherit;
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        color 0.2s,
+        opacity 0.2s;
+}
+
+.voice-button:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
+.voice-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.voice-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.voice-button.listening {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #b91c1c;
+}
+
+.voice-status {
+    font-size: 0.9rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+
+footer {
+    text-align: center;
+
+    padding: 10px;
+
+    color: #9ca3af;
+
+    font-size: 13px;
+}
+
+
+/* ================================================================
+   HIDDEN
+   ================================================================ */
+
+.hidden {
+    display: none !important;
+}
+
+
+/* ================================================================
+   RESPONSIVE DESIGN
+   ================================================================ */
+
+@media (max-width: 600px) {
+
+    body {
+        padding: 25px 15px;
+    }
+
+
+    .header h1 {
+        font-size: 28px;
+    }
+
+
+    .header p {
+        font-size: 14px;
+    }
+
+
+    .card {
+        padding: 20px;
+    }
+
+
+    .schema-card {
+        padding: 20px;
+    }
+
+
+    .columns {
+        grid-template-columns: 1fr;
+    }
+
+
+    textarea {
+        min-height: 120px;
+    }
+
+
+    .result-header {
+        padding: 12px;
+    }
+
+
+    .info-section {
+        padding: 15px;
+    }
+
+
+    /* ------------------------------------------------------------
+       File Upload Mobile
+       ------------------------------------------------------------ */
+
+    #fileInput {
+        font-size: 13px;
+
+        padding: 10px;
+    }
+
+
+    /* ------------------------------------------------------------
+       Query History Mobile
+       ------------------------------------------------------------ */
+
+    .query-history {
+        gap: 20px;
+    }
+
+
+    .query-history-header {
+        padding: 15px;
+    }
+
+
+    .query-history-header h2 {
+        font-size: 16px;
+    }
+
+
+    .query-header-top {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 8px;
+    }
+
+
+    /* ------------------------------------------------------------
+       Query Result Mobile
+       ------------------------------------------------------------ */
+
+    .query-result-header {
+        padding: 15px;
+    }
+
+
+    .result-table-container {
+        padding: 15px;
+    }
+
+
+    .query-table {
+        min-width: 550px;
+    }
+
+
+    .query-table th,
+    .query-table td {
+        padding: 10px 12px;
+
+        font-size: 12px;
+    }
+
+
+    /* ------------------------------------------------------------
+       Voice Input Mobile
+       ------------------------------------------------------------ */
+
+    .voice-controls {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .voice-button {
+        width: 100%;
+    }
+
+    /* ------------------------------------------------------------
+       Database Status Mobile
+       ------------------------------------------------------------ */
+
+    .database-status {
+        font-size: 13px;
+    }
+
+}

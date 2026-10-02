@@ -1,0 +1,7 @@
+Flask
+pandas
+groq
+python-dotenv
+sqlparse
+faster-whisper
+gunicorn
