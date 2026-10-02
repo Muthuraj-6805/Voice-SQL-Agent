@@ -3,5 +3,6 @@ pandas
 groq
 python-dotenv
 sqlparse
-faster-whisper
+faster-whisper==1.2.1
+av<19
 gunicorn
