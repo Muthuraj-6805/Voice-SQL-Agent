@@ -34,13 +34,6 @@ from database import (
 )
 
 import os
-import tempfile
-
-try:
-    from faster_whisper import WhisperModel
-except ImportError:
-    WhisperModel = None
-
 
 # -------------------------------------------------------------------
 # Flask Application
@@ -56,39 +49,6 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
 )
-
-
-# -------------------------------------------------------------------
-# Local Whisper Configuration
-# -------------------------------------------------------------------
-
-WHISPER_MODEL_SIZE = os.getenv(
-    "WHISPER_MODEL_SIZE",
-    "base.en"
-)
-
-_whisper_model = None
-
-
-def get_whisper_model():
-    """Load the local Whisper model only when it is first needed."""
-
-    global _whisper_model
-
-    if WhisperModel is None:
-        raise RuntimeError(
-            "Local speech-to-text is not installed. "
-            "Run: pip install faster-whisper"
-        )
-
-    if _whisper_model is None:
-        _whisper_model = WhisperModel(
-            WHISPER_MODEL_SIZE,
-            device="cpu",
-            compute_type="int8"
-        )
-
-    return _whisper_model
 
 
 # -------------------------------------------------------------------
@@ -150,98 +110,6 @@ def stylesheet():
         BASE_DIR,
         "style.css"
     )
-
-
-# -------------------------------------------------------------------
-# Local Speech-to-Text
-# -------------------------------------------------------------------
-
-@app.route(
-    "/transcribe",
-    methods=["POST"]
-)
-def transcribe_audio():
-    """
-    Receive microphone audio from the browser and transcribe it
-    locally using Faster-Whisper. No speech-recognition API is used.
-    """
-
-    temp_path = None
-
-    try:
-
-        if "audio" not in request.files:
-            return jsonify({
-                "success": False,
-                "error": "No audio recording was received."
-            }), 400
-
-        audio_file = request.files["audio"]
-
-        if not audio_file.filename:
-            return jsonify({
-                "success": False,
-                "error": "The audio recording is empty."
-            }), 400
-
-        suffix = os.path.splitext(
-            audio_file.filename
-        )[1].lower()
-
-        if suffix not in {".webm", ".wav", ".ogg", ".mp4", ".m4a"}:
-            suffix = ".webm"
-
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=suffix
-        ) as temp_file:
-            audio_file.save(temp_file.name)
-            temp_path = temp_file.name
-
-        model = get_whisper_model()
-
-        segments, info = model.transcribe(
-            temp_path,
-            language="en",
-            beam_size=5,
-            vad_filter=True
-        )
-
-        text_parts = []
-
-        for segment in segments:
-            cleaned = segment.text.strip()
-            if cleaned:
-                text_parts.append(cleaned)
-
-        transcript = " ".join(text_parts).strip()
-
-        if not transcript:
-            return jsonify({
-                "success": False,
-                "error": "No speech was detected. Please try again."
-            }), 400
-
-        return jsonify({
-            "success": True,
-            "text": transcript,
-            "language": getattr(info, "language", "en")
-        })
-
-    except Exception as error:
-
-        return jsonify({
-            "success": False,
-            "error": str(error)
-        }), 500
-
-    finally:
-
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
 
 
 # -------------------------------------------------------------------
@@ -937,13 +805,7 @@ if __name__ == "__main__":
     print()
 
     print(
-        "Speech-to-Text: Local Faster-Whisper"
-    )
-
-    print()
-
-    print(
-        f"Whisper Model: {WHISPER_MODEL_SIZE}"
+        "Speech-to-Text: Browser Speech Recognition"
     )
 
     print()
